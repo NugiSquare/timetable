@@ -205,8 +205,6 @@ var Lecture = (function () {
             item.setAttribute('class', 'timetable-etc-item');
             item.setAttribute('style', 'border-color:#1587BD;background-color:#9FC6E7;color:#1d1d1d;');
             item.setAttribute('onclick', 'Timetable.getInstance().removeTimetableLecture("' + this.id + '")');
-            item.setAttribute('onmouseover', 'Timetable.getInstance().setSelectLecture("' + this.id + '")');
-            item.setAttribute('onmouseout', 'Timetable.getInstance().setSelectLecture(null)');
             item.innerHTML = this.subject_name + ' (' + this.id + ')';
             group.appendChild(item);
         }
@@ -223,8 +221,6 @@ var Lecture = (function () {
                 item.setAttribute('class', 'timetable-time-item');
                 item.setAttribute('style', 'margin-top:' + margin_top + 'px; height:' + height + 'px; border-color:#1587BD;background-color:#9FC6E7;color:#1d1d1d;');
                 item.setAttribute('onclick', 'Timetable.getInstance().removeTimetableLecture("' + this.id + '")');
-                item.setAttribute('onmouseover', 'Timetable.getInstance().setSelectLecture("' + this.id + '")');
-                item.setAttribute('onmouseout', 'Timetable.getInstance().setSelectLecture(null)');
                 var html = '<p><span class="timetable-time-item-subject">' + this.subject_name + '</span>';
                 html += '<span> ' + this.id + '</span></p>';
                 html += '<p><span>' + this.professors.join(',') + ' </span>';
@@ -315,7 +311,7 @@ var Timetable = (function () {
     };
     Timetable.prototype.init = function () {
         var hash_split = window.location.hash.split('/');
-        if (hash_split.length > 4 && !isNaN(hash_split[2]) && !isNaN(hash_split[3])) {
+        if (hash_split.length > 4 && !isNaN(hash_split[2]) && !isNaN(hash_split[3]) && hash_split[4] != '') {
             this._hashinfo.campus = hash_split[1];
             this._hashinfo.year = Number(hash_split[2]);
             this._hashinfo.term = Number(hash_split[3]);
@@ -396,6 +392,7 @@ var Timetable = (function () {
         this._timetableLectures = [];
         this._currentYear = year;
         this._currentTerm = term;
+        ga('send', 'event', this.getCurrentCampus().getId(), 'setCurrentTerm', year + '/' + term);
         $.get('data/' + this.getCurrentCampus().getId() + '/' + year + '/term.json', function (data) {
             for (var i = 0; i < data.length; i++) {
                 if (data[i].id == term) {
@@ -459,6 +456,7 @@ var Timetable = (function () {
                 Timetable.getInstance().showLectureList(data[i]);
             }
         });
+        ga('send', 'event', this.getCurrentCampus().getId(), 'selectDepartment', this._currentYear + '/' + this._currentTerm + '/' + depart_id);
     };
     Timetable.prototype.getDepartmentNames = function (depart_ids) {
         var names = [];
@@ -509,6 +507,7 @@ var Timetable = (function () {
         }
         this._timetableLectures.push(lecture);
         this.updateShowLectures();
+        ga('send', 'event', this.getCurrentCampus().getId(), 'addTimetableLecture', this._currentYear + '/' + this._currentTerm + '/' + lecture_id);
     };
     Timetable.prototype.removeTimetableLecture = function (lecture_id) {
         for (var i = 0; i < this._timetableLectures.length; i++) {
@@ -627,6 +626,7 @@ var Timetable = (function () {
                 }
             }
         }
+        //lecture_count 개의 lecutre를 가지고 있는 집합을 생성
         for (var lecture_count = subject_list.length; lecture_count > 0; lecture_count--) {
             for (var start_index = 0; start_index <= subject_list.length - lecture_count; start_index++) {
                 gen_subset([], start_index, lecture_count);
@@ -644,6 +644,7 @@ var Timetable = (function () {
                 return;
             if (max_credit < credit_sum)
                 return;
+            //시간표 겹치는지 체크
             for (var lecture1_i = 0; lecture1_i < lectures.length; lecture1_i++) {
                 for (var lecture2_i = lecture1_i + 1; lecture2_i < lectures.length; lecture2_i++) {
                     if (lectures[lecture1_i].overlapTime(lectures[lecture2_i]))
@@ -652,6 +653,7 @@ var Timetable = (function () {
             }
             timetable._timetableGeneratorTimetableList.push(lectures);
         }
+        // 생성된 조합을 보면서 조건에 해당하지 않는 시간표를 제외하고 가능한 시간표만 포함
         for (var i = 0; i < tempTimetableList.length; i++) {
             saveTimetable(tempTimetableList[i]);
         }
@@ -678,4 +680,3 @@ var Timetable = (function () {
     Timetable._instance = new Timetable();
     return Timetable;
 })();
-//# sourceMappingURL=timetable.js.map
